@@ -1,51 +1,86 @@
-// docRef = app.activeDocument
+////
+// USER VARIABLES
+////
 
 // Set badge sizes
 var badgeSizes = [72, 36, 18];
+
+
+///
+// SCRIPT VARIABLES
+////
+
+var doc = app.activeDocument
+
+// Get a reference to our current history state
+var originState = doc.activeHistoryState
 
 // Set units to Pixels
 var originalRulerUnits = app.preferences.rulerUnits
 app.preferences.rulerUnits = Units.PIXELS
 
-// Set all layers invisible
-for (var layerIndex = 0; layerIndex < app.activeDocument.artLayers.length; layerIndex++)
-{
-	var eachLayer = app.activeDocument.artLayers[layerIndex]
-	eachLayer.visible = false
-}
+var docPath = doc.path
+//alert ("Document Path: " + docPath)
 
-// Make badges for all sizes
-for (var i = 0; i < badgeSizes.length; i++) 
-{
-	var badgeSize = badgeSizes[i]
-	makeBadge(app.activeDocument, badgeSize)
-}
 
-function makeBadge(docRef, size) {
+////
+// FUNCTIONS
+////
+
+function resizeBadges(docRef, size) {
 	docRef.resizeImage(size,size)
-	saveEachLayer(docRef)
 }
 
 // Saves each layer as PNG individually
-function saveEachLayer(docRef)
+function saveBadges(docRef, size)
 {
 	for (var layerIndex = 0; layerIndex < docRef.artLayers.length; layerIndex++)
 	{
-
 		var eachLayer = docRef.artLayers[layerIndex]
 		eachLayer.visible = true
 
 		// Export as PNG
-		pngFile = new File( "/Users/daniel/Temp" + layerIndex + ".png" )
+		fileName = eachLayer.name
+		pngFile = new File( docPath + "/" + fileName + "_" + size + ".png" )
 		pngSaveOptions = new PNGSaveOptions()
 		pngSaveOptions.compression = 0
 		pngSaveOptions.interlaced = false
-		app.activeDocument.saveAs(pngFile, pngSaveOptions, true, Extension.LOWERCASE)
+		doc.saveAs(pngFile, pngSaveOptions, true, Extension.LOWERCASE)
 
 		eachLayer.visible = false
-
 	}
 }
 
+
+////
+// MAIN
+////
+function main() {
+	// Set all layers invisible
+	for (var layerIndex = 0; layerIndex < doc.artLayers.length; layerIndex++)
+	{
+		var eachLayer = doc.artLayers[layerIndex]
+		eachLayer.visible = false
+	}
+
+	// Save state so we can revert to full size for each pass
+	var savedState = doc.activeHistoryState
+
+	// Make badges for all sizes
+	for (var i = 0; i < badgeSizes.length; i++) 
+	{
+		var badgeSize = badgeSizes[i]
+		resizeBadges(doc, badgeSize)
+		saveBadges(doc, badgeSize)
+
+		doc.activeHistoryState = savedState
+	}
+}
+
+main()
+
 // Restore ruler preferences
 app.preferences.rulerUnits = originalRulerUnits
+
+// Restore document to pre-script state
+doc.activeHistoryState = originState
